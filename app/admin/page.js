@@ -8,6 +8,11 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, query, orderBy, 
 const CASH_DOC_ID = '12S687VkZHdxufuD6Uzj';
 const HADITH_PARENT_ID = 'yHXCuejUUlzeO6yMLTey';
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)

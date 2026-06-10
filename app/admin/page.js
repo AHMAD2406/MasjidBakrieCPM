@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { db } from '../../lib/firebase'
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, increment } from 'firebase/firestore'
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, query, orderBy, onSnapshot, arrayUnion, arrayRemove, increment } from 'firebase/firestore'
+
+// Configuration constants for Firebase document IDs
+const CASH_DOC_ID = '12S687VkZHdxufuD6Uzj';
+const HADITH_PARENT_ID = 'yHXCuejUUlzeO6yMLTey';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -36,7 +40,7 @@ export default function AdminDashboard() {
   // Fetch saldo and transactions from Firebase
   useEffect(() => {
     // Subscribe to real-time updates for the main cash document
-    const cashDocRef = doc(db, 'MasjidBakrie', '12S687VkZHdxufuD6Uzj')
+    const cashDocRef = doc(db, 'MasjidBakrie', CASH_DOC_ID)
     
     const unsubscribe = onSnapshot(cashDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -62,7 +66,7 @@ export default function AdminDashboard() {
     setLoadingHadiths(true);
       
     // Use sub-collection under MasjidBakrie document with correct ID
-    const hadithsRef = collection(db, 'MasjidBakrie', 'yHXCuejUUlzeO6yMLTey', 'hadiths');
+    const hadithsRef = collection(db, 'MasjidBakrie', HADITH_PARENT_ID, 'hadiths');
     const q = query(hadithsRef, orderBy('position', 'asc'));
       
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -96,7 +100,7 @@ export default function AdminDashboard() {
         return
       }
 
-      const cashDocRef = doc(db, 'MasjidBakrie', '12S687VkZHdxufuD6Uzj')
+      const cashDocRef = doc(db, 'MasjidBakrie', CASH_DOC_ID)
       
       // Create new transaction object with proper date fields
       const now = new Date()
@@ -119,22 +123,13 @@ export default function AdminDashboard() {
         })
       }
 
-      // Get current saldo
-      const docSnap = await getDoc(cashDocRef)
-      const currentData = docSnap.exists() ? docSnap.data() : { saldo: 0, transactions: [] }
-      const currentSaldo = currentData.saldo || 0
-      const currentTransactions = currentData.transactions || []
-      
-      // Calculate new saldo
-      const newSaldo = type === 'income' 
-        ? currentSaldo + amount 
-        : currentSaldo - amount
-
-      // Update document with new transaction and saldo
+      // Use atomic increment and arrayUnion to avoid race conditions
       await updateDoc(cashDocRef, {
-        saldo: newSaldo,
-        transactions: [newTransaction, ...currentTransactions]
-      })
+        saldo: increment(type === 'income' ? amount : -amount),
+        transactions: arrayUnion(newTransaction)
+      });
+      // Note: Transactions are added to end of array with arrayUnion, 
+      // logic to keep newest first can be handled by sorting in the UI or fetch.
 
       // Reset form
       setFormData({ description: '', amount: '', notes: '', type: 'income' })
@@ -155,7 +150,7 @@ export default function AdminDashboard() {
         return
       }
 
-      const cashDocRef = doc(db, 'MasjidBakrie', '12S687VkZHdxufuD6Uzj')
+      const cashDocRef = doc(db, 'MasjidBakrie', CASH_DOC_ID)
       
       // Find old transaction
       const oldTransaction = transactions.find(t => t.id === id)
@@ -207,7 +202,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const cashDocRef = doc(db, 'MasjidBakrie', '12S687VkZHdxufuD6Uzj')
+      const cashDocRef = doc(db, 'MasjidBakrie', CASH_DOC_ID)
       
       // Find transaction to get amount and type
       const transactionToDelete = transactions.find(t => t.id === id)
@@ -272,7 +267,7 @@ export default function AdminDashboard() {
       }
 
       // Use sub-collection under correct MasjidBakrie document ID
-      const hadithsRef = collection(db, 'MasjidBakrie', 'yHXCuejUUlzeO6yMLTey', 'hadiths');
+      const hadithsRef = collection(db, 'MasjidBakrie', HADITH_PARENT_ID, 'hadiths');
       
       const hadithData = {
         arabic: hadithForm.arabic,
@@ -288,7 +283,7 @@ export default function AdminDashboard() {
       if (editingHadithId) {
         // Update existing hadith
         console.log('✏️ Updating hadith ID:', editingHadithId);
-        const docRef = doc(db, 'MasjidBakrie', 'yHXCuejUUlzeO6yMLTey', 'hadiths', editingHadithId)
+        const docRef = doc(db, 'MasjidBakrie', HADITH_PARENT_ID, 'hadiths', editingHadithId)
         await updateDoc(docRef, hadithData)
         alert('Hadits berhasil diupdate!')
       } else {
@@ -341,7 +336,7 @@ export default function AdminDashboard() {
     try {
       console.log('🗑️ Deleting hadith ID:', id);
       // Use sub-collection under correct MasjidBakrie document ID
-      const docRef = doc(db, 'MasjidBakrie', 'yHXCuejUUlzeO6yMLTey', 'hadiths', id)
+      const docRef = doc(db, 'MasjidBakrie', HADITH_PARENT_ID, 'hadiths', id)
       await deleteDoc(docRef)
       console.log('✅ Hadith deleted successfully');
       alert('Hadits berhasil dihapus!')

@@ -1,3 +1,6 @@
+# Tambahkan ini di file workflow kamu
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 # Sample workflow for building and deploying a Next.js site to GitHub Pages
 #
 # To get started with Next.js see: https://nextjs.org/docs/getting-started

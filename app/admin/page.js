@@ -156,21 +156,10 @@ export default function AdminDashboard() {
       const oldTransaction = transactions.find(t => t.id === id)
       const oldAmount = parseFloat(oldTransaction?.amount) || 0
       
-      // Get current saldo from Firestore
-      const docSnap = await getDoc(cashDocRef)
-      const currentData = docSnap.exists() ? docSnap.data() : { saldo: 0, transactions: [] }
-      let currentSaldo = currentData.saldo || 0
-      
-      // Adjust saldo based on changes
-      // First, remove old transaction effect
-      currentSaldo = currentType === 'income' 
-        ? currentSaldo - oldAmount 
-        : currentSaldo + oldAmount
-      
-      // Then add new transaction effect
-      currentSaldo = formData.type === 'income' 
-        ? currentSaldo + amount 
-        : currentSaldo - amount
+      // Calculate the net change in saldo
+      const oldEffect = oldTransaction.type === 'income' ? oldAmount : -oldAmount;
+      const newEffect = formData.type === 'income' ? amount : -amount;
+      const saldoChange = newEffect - oldEffect;
 
       // Update transaction in array
       const updatedTransactions = transactions.map(t => 
@@ -179,9 +168,11 @@ export default function AdminDashboard() {
           : t
       )
 
-      // Update document
+      // Update document with atomic saldo change and updated transactions array
+      // arrayUnion/arrayRemove are not suitable for updating existing array elements,
+      // so we update the entire transactions array after modifying the specific item.
       await updateDoc(cashDocRef, {
-        saldo: currentSaldo,
+        saldo: increment(saldoChange),
         transactions: updatedTransactions
       })
 
@@ -209,23 +200,10 @@ export default function AdminDashboard() {
       const amount = parseFloat(transactionToDelete?.amount) || 0
       const type = transactionToDelete?.type
       
-      // Get current saldo from Firestore
-      const docSnap = await getDoc(cashDocRef)
-      const currentData = docSnap.exists() ? docSnap.data() : { saldo: 0, transactions: [] }
-      let currentSaldo = currentData.saldo || 0
-      
-      // Adjust saldo: reverse the effect of deleted transaction
-      currentSaldo = type === 'income' 
-        ? currentSaldo - amount 
-        : currentSaldo + amount
-
-      // Remove transaction from array
-      const updatedTransactions = transactions.filter(t => t.id !== id)
-
-      // Update document
+      // Use atomic decrement for saldo and arrayRemove for transaction
       await updateDoc(cashDocRef, {
-        saldo: currentSaldo,
-        transactions: updatedTransactions
+        saldo: increment(type === 'income' ? -amount : amount),
+        transactions: arrayRemove(transactionToDelete)
       })
       
       alert('Transaksi berhasil dihapus!')

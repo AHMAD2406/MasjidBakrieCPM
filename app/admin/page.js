@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { db } from '../../lib/firebase'
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, query, orderBy, onSnapshot, arrayUnion, arrayRemove, increment } from 'firebase/firestore'
 
 // Configuration constants for Firebase document IDs
 const CASH_DOC_ID = '12S687VkZHdxufuD6Uzj';
 const HADITH_PARENT_ID = 'yHXCuejUUlzeO6yMLTey';
+
+// Force this page to be rendered dynamically, preventing prerendering errors.
+export const dynamic = 'force-dynamic';
 
 export const viewport = {
   width: 'device-width',
@@ -352,9 +355,15 @@ export default function AdminDashboard() {
     totalExpenses: transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
   }
 
-  const recentTransactions = transactions.slice(0, 5)
+  // Sort transactions once and memoize the result for performance
+  const sortedTransactions = useMemo(() => {
+    return [...transactions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [transactions]);
+
+  const recentTransactions = sortedTransactions.slice(0, 5);
 
   const formatRupiah = (angka) => {
+    if (isNaN(angka)) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -508,7 +517,7 @@ export default function AdminDashboard() {
                 
                 {/* Mobile Card View */}
                 <div className="lg:hidden divide-y divide-slate-700">
-                  {recentTransactions.length === 0 ? (
+                  {loading ? <div className="p-8 text-center text-slate-400 text-sm">Memuat...</div> : recentTransactions.length === 0 ? (
                     <div className="p-8 text-center text-slate-400 text-sm">
                       📭 Belum ada transaksi
                     </div>
@@ -554,7 +563,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700">
-                      {recentTransactions.length === 0 ? (
+                      {loading ? (<tr><td colSpan="4" className="px-6 py-8 text-center text-slate-400 text-sm">Memuat...</td></tr>) : recentTransactions.length === 0 ? (
                         <tr>
                           <td colSpan="4" className="px-6 py-8 text-center text-slate-400 text-sm">
                             📭 Belum ada transaksi
@@ -898,7 +907,7 @@ export default function AdminDashboard() {
                   <>
                     {/* Mobile Card View */}
                     <div className="lg:hidden divide-y divide-slate-700">
-                      {transactions.map((transaction) => (
+                      {sortedTransactions.map((transaction) => (
                         <div key={transaction.id} className="p-4 hover:bg-slate-800/50 transition-colors">
                           <div className="flex items-start justify-between gap-3 mb-2">
                             <div className="flex-1 min-w-0">
@@ -964,7 +973,7 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-700">
-                          {transactions.map((transaction) => (
+                          {sortedTransactions.map((transaction) => (
                             <tr key={transaction.id} className="hover:bg-slate-800/50 transition-colors">
                               <td className="px-6 py-4 text-sm text-white font-medium break-words max-w-[200px] align-top">
                                 <div className="font-medium">{transaction.description}</div>

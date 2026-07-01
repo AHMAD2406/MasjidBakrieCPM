@@ -34,6 +34,11 @@ export default function AdminDashboard() {
   })
   const [editingId, setEditingId] = useState(null)
   const [showConfirmDelete, setShowConfirmDelete] = useState(null)
+
+  // Notification state
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+
+  // Hadith form state
   const [showConfirmDeleteHadith, setShowConfirmDeleteHadith] = useState(null)
   
   // Hadith form state
@@ -46,6 +51,18 @@ export default function AdminDashboard() {
   })
   const [editingHadithId, setEditingHadithId] = useState(null)
 
+  // Function to show notification
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: 'success' });
+    }, 3000); // Hide after 3 seconds
+  };
+
+  // Add this useEffect to clear notification on tab change
+  useEffect(() => {
+    setNotification({ show: false, message: '', type: 'success' });
+  }, [activeTab]);
   // Fetch saldo and transactions from Firebase
   useEffect(() => {
     // Subscribe to real-time updates for the main cash document
@@ -105,7 +122,7 @@ export default function AdminDashboard() {
     try {
       const amount = parseFloat(formData.amount)
       if (!formData.description || isNaN(amount) || amount <= 0) {
-        alert('Mohon isi data dengan benar!')
+        showNotification('Mohon isi data dengan benar!', 'error');
         return
       }
 
@@ -142,10 +159,10 @@ export default function AdminDashboard() {
 
       // Reset form
       setFormData({ description: '', amount: '', notes: '', type: 'income' })
-      alert('Transaksi berhasil ditambahkan!')
+      showNotification('Transaksi berhasil ditambahkan!');
     } catch (error) {
       console.error('Error adding transaction:', error)
-      alert('Gagal menambahkan transaksi. Silakan coba lagi.')
+      showNotification('Gagal menambahkan transaksi. Silakan coba lagi.', 'error');
     }
   }
 
@@ -155,7 +172,7 @@ export default function AdminDashboard() {
     try {
       const amount = parseFloat(formData.amount)
       if (!formData.description || isNaN(amount) || amount <= 0) {
-        alert('Mohon isi data dengan benar!')
+        showNotification('Mohon isi data dengan benar!', 'error');
         return
       }
 
@@ -188,10 +205,10 @@ export default function AdminDashboard() {
       // Reset form
       setFormData({ description: '', amount: '', notes: '', type: 'income' })
       setEditingId(null)
-      alert('Transaksi berhasil diupdate!')
+      showNotification('Transaksi berhasil diupdate!');
     } catch (error) {
       console.error('Error updating transaction:', error)
-      alert('Gagal mengupdate transaksi. Silakan coba lagi.')
+      showNotification('Gagal mengupdate transaksi. Silakan coba lagi.', 'error');
     }
   }
 
@@ -211,11 +228,11 @@ export default function AdminDashboard() {
         transactions: arrayRemove(transactionToDelete)
       })
       
-      alert('Transaksi berhasil dihapus!')
+      showNotification('Transaksi berhasil dihapus!');
       setShowConfirmDelete(null)
     } catch (error) {
       console.error('Error deleting transaction:', error)
-      alert('Gagal menghapus transaksi. Silakan coba lagi.')
+      showNotification('Gagal menghapus transaksi. Silakan coba lagi.', 'error');
     }
   }
 
@@ -245,7 +262,7 @@ export default function AdminDashboard() {
       console.log('📝 Saving hadith...', hadithForm);
       
       if (!hadithForm.arabic || !hadithForm.translation || !hadithForm.source || !hadithForm.category) {
-        alert('Mohon lengkapi semua data hadits!')
+        showNotification('Mohon lengkapi semua data hadits!', 'error');
         return
       }
 
@@ -268,13 +285,13 @@ export default function AdminDashboard() {
         console.log('✏️ Updating hadith ID:', editingHadithId);
         const docRef = doc(db, 'MasjidBakrie', HADITH_PARENT_ID, 'hadiths', editingHadithId)
         await updateDoc(docRef, hadithData)
-        alert('Hadits berhasil diupdate!')
+        showNotification('Hadits berhasil diupdate!');
       } else {
         // Add new hadith
         console.log('➕ Adding new hadith');
         const docRef = await addDoc(hadithsRef, hadithData)
         console.log('✅ Hadith saved with ID:', docRef.id);
-        alert('Hadits berhasil ditambahkan!')
+        showNotification('Hadits berhasil ditambahkan!');
       }
 
       // Reset form
@@ -293,7 +310,7 @@ export default function AdminDashboard() {
         message: error.message,
         stack: error.stack
       });
-      alert(`Gagal menyimpan hadits.\n\nError: ${error.message}\n\nSilakan periksa console untuk detail.`);
+      showNotification(`Gagal menyimpan hadits: ${error.message}`, 'error');
     }
   }
 
@@ -318,7 +335,7 @@ export default function AdminDashboard() {
       const docRef = doc(db, 'MasjidBakrie', HADITH_PARENT_ID, 'hadiths', id)
       await deleteDoc(docRef)
       console.log('✅ Hadith deleted successfully');
-      alert('Hadits berhasil dihapus!')
+      showNotification('Hadits berhasil dihapus!');
       setShowConfirmDeleteHadith(null); // Close confirmation dialog
     } catch (error) {
       console.error('❌ Error deleting hadith:', error)
@@ -326,7 +343,7 @@ export default function AdminDashboard() {
         code: error.code,
         message: error.message
       });
-      alert(`Gagal menghapus hadits.\n\nError: ${error.message}`);
+      showNotification(`Gagal menghapus hadits: ${error.message}`, 'error');
     }
   }
 
@@ -374,6 +391,24 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Notification Component */}
+      {notification.show && (
+        <div className={`fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-lg text-white transition-all duration-300 ${
+          notification.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
+        } ${notification.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
+          <div className="flex items-center gap-3">
+            <span>{notification.type === 'success' ? '✅' : '❌'}</span>
+            <p className="font-medium">{notification.message}</p>
+            <button 
+              onClick={() => setNotification({ ...notification, show: false })}
+              className="ml-4 text-white/70 hover:text-white"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 

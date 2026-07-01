@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   })
   const [editingId, setEditingId] = useState(null)
   const [showConfirmDelete, setShowConfirmDelete] = useState(null)
+  const [showConfirmDeleteHadith, setShowConfirmDeleteHadith] = useState(null)
   
   // Hadith form state
   const [hadithForm, setHadithForm] = useState({
@@ -196,10 +197,6 @@ export default function AdminDashboard() {
 
   // Delete transaction
   const handleDeleteTransaction = async (id) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) {
-      return
-    }
-
     try {
       const cashDocRef = doc(db, 'MasjidBakrie', CASH_DOC_ID)
       
@@ -315,10 +312,6 @@ export default function AdminDashboard() {
 
   // Delete hadith
   const handleDeleteHadith = async (id) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus hadits ini?')) {
-      return
-    }
-
     try {
       console.log('🗑️ Deleting hadith ID:', id);
       // Use sub-collection under correct MasjidBakrie document ID
@@ -326,6 +319,7 @@ export default function AdminDashboard() {
       await deleteDoc(docRef)
       console.log('✅ Hadith deleted successfully');
       alert('Hadits berhasil dihapus!')
+      setShowConfirmDeleteHadith(null); // Close confirmation dialog
     } catch (error) {
       console.error('❌ Error deleting hadith:', error)
       console.error('Error details:', {
@@ -749,7 +743,7 @@ export default function AdminDashboard() {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDeleteHadith(hadith.id)}
+                              onClick={() => setShowConfirmDeleteHadith(hadith.id)}
                               className="p-1.5 sm:p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg hover:bg-slate-800"
                               title="Hapus"
                             >
@@ -761,6 +755,27 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
+                    {/* Hadith Delete Confirmation Modal */}
+                    {showConfirmDeleteHadith && (
+                      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 max-w-sm w-full text-center shadow-2xl">
+                          <h3 className="text-lg font-bold text-white mb-2">Konfirmasi Hapus</h3>
+                          <p className="text-slate-400 mb-6">Apakah Anda yakin ingin menghapus hadits ini secara permanen?</p>
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => setShowConfirmDeleteHadith(null)}
+                              className="flex-1 py-2.5 bg-slate-700 text-white rounded-xl hover:bg-slate-600 transition-all"
+                            >
+                              Batal
+                            </button>
+                            <button
+                              onClick={() => handleDeleteHadith(showConfirmDeleteHadith)}
+                              className="flex-1 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"
+                            >Hapus</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -944,7 +959,7 @@ export default function AdminDashboard() {
                                 </svg>
                               </button>
                               <button
-                                onClick={() => handleDeleteTransaction(transaction.id)}
+                                onClick={() => setShowConfirmDelete(transaction.id)}
                                 className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                                 title="Hapus"
                               >
@@ -1017,7 +1032,7 @@ export default function AdminDashboard() {
                                     </svg>
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteTransaction(transaction.id)}
+                                    onClick={() => setShowConfirmDelete(transaction.id)}
                                     className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                                     title="Hapus"
                                     aria-label="Delete transaction"
@@ -1032,6 +1047,27 @@ export default function AdminDashboard() {
                           ))}
                         </tbody>
                       </table>
+                      {/* Transaction Delete Confirmation Modal */}
+                      {showConfirmDelete && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                          <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 max-w-sm w-full text-center shadow-2xl">
+                            <h3 className="text-lg font-bold text-white mb-2">Konfirmasi Hapus</h3>
+                            <p className="text-slate-400 mb-6">Apakah Anda yakin ingin menghapus transaksi ini? Tindakan ini tidak dapat dibatalkan.</p>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => setShowConfirmDelete(null)}
+                                className="flex-1 py-2.5 bg-slate-700 text-white rounded-xl hover:bg-slate-600 transition-all"
+                              >
+                                Batal
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTransaction(showConfirmDelete)}
+                                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"
+                              >Hapus</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
